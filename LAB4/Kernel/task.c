@@ -1,0 +1,32 @@
+#include "task.h"
+#include "string.h"
+
+int privilege_task_create(void (*func)(void)) {
+    int id;
+    for (id = 1; id < MAX_TASKS; id++) {
+        if (task_pool[id].state == TASK_UNUSED) {
+            break;
+        }
+    }
+
+    if (id == MAX_TASKS) {
+        return -1; // No available task slot
+    }
+
+    struct task *task = &task_pool[id];
+    task->taskid = id;
+    task->state = TASK_RUNNABLE;
+    task->entry = func;
+
+    // Clear the CPU context for the new task
+    memzero(&task->context, sizeof(task->context));
+
+    unsigned long stack_top = (unsigned long)&kstack_pool[id][LSTACK_SIZE];
+    stack_top &= ~0xFUL; // Align to 16 bytes
+    task->context.sp = stack_top;
+
+    // Set the link register to the entry function
+    task->context.lr = (unsigned long)func;
+
+    return id;
+}
