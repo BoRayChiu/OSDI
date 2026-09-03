@@ -1,5 +1,4 @@
 #include "task.h"
-#include "string.h"
 
 int privilege_task_create(void (*func)(void)) {
     int id;
@@ -29,4 +28,31 @@ int privilege_task_create(void (*func)(void)) {
     task->context.lr = (unsigned long)func;
 
     return id;
+}
+
+void task_init() {
+    for (int i = 0; i < MAX_TASKS; i++) {
+        task_pool[i].taskid = i;
+        task_pool[i].state = TASK_UNUSED;
+    }
+    task_pool[0].state = TASK_RUNNING;
+    set_current(&task_pool[0]);
+}
+
+void context_switch(struct task *next) {
+    struct task *prev = get_current();
+    if (prev == next) {
+        return;
+    }
+    prev->state = TASK_RUNNABLE;
+    next->state = TASK_RUNNING;
+    set_current(next);
+    switch_to(&prev->context, &next->context);
+}
+
+struct task *get_task(int taskid) {
+    if (taskid < 0 || taskid >= MAX_TASKS) {
+        return 0;
+    }
+    return &task_pool[taskid];
 }

@@ -1,6 +1,8 @@
 #ifndef TASK_H
 #define TASK_H
 
+#include "string.h"
+
 #define MAX_TASKS 64
 #define LSTACK_SIZE 4096
 
@@ -23,7 +25,7 @@ struct cpu_context {
     unsigned long x28;
     unsigned long fp; // Frame pointer (x29)
     unsigned long lr; // Link register (x30)
-    unsigned long sp; // Stack pointer (x31)
+    unsigned long sp; // Stack pointer; encoded as register number 31 in some instructions
 };
 
 struct task {
@@ -37,6 +39,13 @@ static struct task task_pool[MAX_TASKS];
 static unsigned char kstack_pool[MAX_TASKS][LSTACK_SIZE]
     __attribute__((aligned(16)));
 
+extern void set_current(struct task *task);
+extern struct task* get_current(void);
+extern void switch_to(struct cpu_context *prev, struct cpu_context *next);
+
 int privilege_task_create(void (*func)(void));
+void task_init(void);
+void context_switch(struct task *next);
+struct task *get_task(int taskid);
 
 #endif // TASK_H

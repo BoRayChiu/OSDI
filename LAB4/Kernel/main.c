@@ -10,7 +10,9 @@ extern void local_timer_enable(void);
 extern void enable_irq_el1(void);
 extern unsigned long get_current_el(void);
 extern void switch_to_el0(void);
-extern void set_current(struct task *task);
+
+static int task1_id;
+static int task2_id;
 
 void syscall_core_timer_enable() {
     asm volatile("svc #2");
@@ -96,18 +98,33 @@ void shell() {
     }
 }
 
-void task_init() {
-    for (int i = 0; i < MAX_TASKS; i++) {
-        task_pool[i].taskid = i;
-        task_pool[i].state = TASK_UNUSED;
+void delay(unsigned long count) {
+    for (unsigned long i = 0; i < count; i++) {
+        asm volatile("nop");
     }
-    task_pool[0].state = TASK_RUNNING;
-    set_current(&task_pool[0]);
 }
 
-void foo() {
-        while (1) {
-        uart_send_string("foo\r\n");
+void task1() {
+    int count = 0;
+    while (1) {
+        uart_send_string("Task 1 running\r\n");
+        uart_send_string("Task 1 count: ");
+        uart_send_string(itoa(count++, 10));
+        uart_send_string("\r\n");
+        delay(1000000000);
+        context_switch(get_task(task2_id));
+    }
+}
+
+void task2() {
+    int count = 0;
+    while (1) {
+        uart_send_string("Task 2 running\r\n");
+        uart_send_string("Task 2 count: ");
+        uart_send_string(itoa(count++, 10));
+        uart_send_string("\r\n");
+        delay(1000000000);
+        context_switch(get_task(task1_id));
     }
 }
 
@@ -130,14 +147,13 @@ void main() {
 
     task_init();
 
-    int id1 = privilege_task_create(foo);
-    int id2 = privilege_task_create(foo);
-    uart_send_string("Created task: ");
-    uart_send('0' + id1);
-    uart_send_string("\r\n");
-    uart_send_string("Created task: ");
-    uart_send('0' + id2);
-    uart_send_string("\r\n");
+    task1_id = privilege_task_create(task1);
+    task2_id = privilege_task_create(task2);
+    uart_send_string("Task 1 created\r\n");
+    uart_send_string("Task 2 created\r\n");
+
+    // Start the first task
+    context_switch(get_task(task1_id));
 
     // Running at EL1
     shell();
