@@ -6,6 +6,11 @@
 #define MAX_TASKS 64
 #define LSTACK_SIZE 4096
 
+static struct task *runqueue[MAX_TASKS];
+static int rq_head = 0;
+static int rq_tail = 0;
+static int rq_count = 0;
+
 enum task_state {
     TASK_UNUSED,
     TASK_RUNNABLE,
@@ -46,6 +51,6 @@ extern void switch_to(struct cpu_context *prev, struct cpu_context *next);
 int privilege_task_create(void (*func)(void));
 void task_init(void);
 void context_switch(struct task *next);
-struct task *get_task(int taskid);
+void schedule(void);
 
 #endif // TASK_H

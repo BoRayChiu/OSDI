@@ -11,9 +11,6 @@ extern void enable_irq_el1(void);
 extern unsigned long get_current_el(void);
 extern void switch_to_el0(void);
 
-static int task1_id;
-static int task2_id;
-
 void syscall_core_timer_enable() {
     asm volatile("svc #2");
 }
@@ -104,27 +101,22 @@ void delay(unsigned long count) {
     }
 }
 
-void task1() {
-    int count = 0;
+void foo() {
     while (1) {
-        uart_send_string("Task 1 running\r\n");
-        uart_send_string("Task 1 count: ");
-        uart_send_string(itoa(count++, 10));
+        struct task *cur = get_current();
+        uart_send_string("Task id: ");
+        uart_send_string(itoa(cur->taskid, 10));
         uart_send_string("\r\n");
         delay(1000000000);
-        context_switch(get_task(task2_id));
+        schedule();
     }
 }
 
-void task2() {
-    int count = 0;
+void idle() {
     while (1) {
-        uart_send_string("Task 2 running\r\n");
-        uart_send_string("Task 2 count: ");
-        uart_send_string(itoa(count++, 10));
-        uart_send_string("\r\n");
+        uart_send_string("Idle task running...\r\n");
+        schedule();
         delay(1000000000);
-        context_switch(get_task(task1_id));
     }
 }
 
@@ -147,13 +139,12 @@ void main() {
 
     task_init();
 
-    task1_id = privilege_task_create(task1);
-    task2_id = privilege_task_create(task2);
-    uart_send_string("Task 1 created\r\n");
-    uart_send_string("Task 2 created\r\n");
+    privilege_task_create(foo);
+    privilege_task_create(foo);
+    privilege_task_create(foo);
+    privilege_task_create(foo);
 
-    // Start the first task
-    context_switch(get_task(task1_id));
+    idle();
 
     // Running at EL1
     shell();
