@@ -10,6 +10,7 @@ extern void local_timer_enable(void);
 extern void enable_irq_el1(void);
 extern unsigned long get_current_el(void);
 extern void switch_to_el0(void);
+extern void core_timer_enable(void);
 
 void syscall_core_timer_enable() {
     asm volatile("svc #2");
@@ -108,7 +109,14 @@ void foo() {
         uart_send_string(itoa(cur->taskid, 10));
         uart_send_string("\r\n");
         delay(1000000000);
-        schedule();
+        
+        if (cur->reschedled) {
+            uart_send_string("Task id: ");
+            uart_send_string(itoa(cur->taskid, 10));
+            uart_send_string(" is rescheduled\r\n");
+            cur->reschedled = 0;
+            schedule();
+        }
     }
 }
 
@@ -143,6 +151,9 @@ void main() {
     privilege_task_create(foo);
     privilege_task_create(foo);
     privilege_task_create(foo);
+
+    core_timer_enable();
+    enable_irq_el1();
 
     idle();
 

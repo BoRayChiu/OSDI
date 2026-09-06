@@ -2,7 +2,7 @@ import serial
 import os
 import time
 
-SERIAL_PORT = '/dev/pts/5'
+SERIAL_PORT = '/dev/pts/10'
 BAUD_RATE = 115200
 KERNEL_PATH = './Kernel/kernel8.img'
 

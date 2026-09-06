@@ -38,6 +38,7 @@ struct task {
     enum task_state state;
     struct cpu_context context;
     void (*entry)(void);
+    volatile int reschedled;
 };
 
 static struct task task_pool[MAX_TASKS];

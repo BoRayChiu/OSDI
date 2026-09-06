@@ -57,8 +57,10 @@ void task_init() {
     for (int i = 0; i < MAX_TASKS; i++) {
         task_pool[i].taskid = i;
         task_pool[i].state = TASK_UNUSED;
+        task_pool[i].reschedled = 0;
     }
     task_pool[0].state = TASK_RUNNING;
+    task_pool[0].reschedled = 0;
     set_current(&task_pool[0]);
 }
 

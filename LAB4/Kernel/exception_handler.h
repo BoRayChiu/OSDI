@@ -3,6 +3,7 @@
 
 #include "uart.h"
 #include "string.h"
+#include "task.h"
 
 #define CORE0_IRQ_SOURCE (*(volatile unsigned int *)0x40000060)
 #define EC_SVC64 0x15

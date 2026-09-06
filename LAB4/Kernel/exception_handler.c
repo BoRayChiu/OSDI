@@ -44,7 +44,11 @@ void irq_exception_handler() {
     // ARM Core Timer
     if (source & (1u << 1)) {
         core_timer_handler();
-        uart_send_string("[Core timer IRQ]\r\n");
+       
+        struct task *cur = get_current();
+        if (cur != 0) {
+            cur->reschedled = 1;
+        }
     }
 
     // ARM Local Timer
