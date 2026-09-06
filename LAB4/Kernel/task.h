@@ -2,9 +2,11 @@
 #define TASK_H
 
 #include "string.h"
+#include "uart.h"
 
 #define MAX_TASKS 64
 #define LSTACK_SIZE 4096
+#define USTACK_SIZE 4096
 
 static struct task *runqueue[MAX_TASKS];
 static int rq_head = 0;
@@ -33,25 +35,39 @@ struct cpu_context {
     unsigned long sp; // Stack pointer; encoded as register number 31 in some instructions
 };
 
+struct trapframe {
+    unsigned long x[31]; // General-purpose registers x0-x30
+    unsigned long sp_el0;
+    unsigned long elr_el1;
+    unsigned long spsr_el1;
+};
+
 struct task {
     int taskid;
     enum task_state state;
     struct cpu_context context;
     void (*entry)(void);
     volatile int reschedled;
+    struct trapframe *trapframe;
+    unsigned long user_stack_top;
+    int is_user;
 };
 
 static struct task task_pool[MAX_TASKS];
 static unsigned char kstack_pool[MAX_TASKS][LSTACK_SIZE]
     __attribute__((aligned(16)));
+static unsigned char ustack_pool[MAX_TASKS][USTACK_SIZE]
+    __attribute__((aligned(16)));
 
 extern void set_current(struct task *task);
 extern struct task* get_current(void);
 extern void switch_to(struct cpu_context *prev, struct cpu_context *next);
+extern void enter_user(struct trapframe *tf, unsigned long kernel_stack_top);
 
 int privilege_task_create(void (*func)(void));
 void task_init(void);
 void context_switch(struct task *next);
 void schedule(void);
+void do_exec(void (*func)(void));
 
 #endif // TASK_H

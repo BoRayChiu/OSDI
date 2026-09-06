@@ -128,6 +128,22 @@ void idle() {
     }
 }
 
+void user_program() {
+    while (1) {
+        while (1) {
+            asm volatile("nop");
+        };
+    }
+}
+
+void user_test() {
+    uart_send_string("Task \r\n");
+    uart_send_string(itoa(get_current()->taskid, 10));
+    uart_send_string(" entering EL0\r\n");
+    do_exec(user_program);
+    uart_send_string("Should not reach here\r\n");
+}
+
 void main() {
     uart_init();
     uart_send_string("===============\r\n");
@@ -147,13 +163,12 @@ void main() {
 
     task_init();
 
-    privilege_task_create(foo);
-    privilege_task_create(foo);
-    privilege_task_create(foo);
-    privilege_task_create(foo);
+    privilege_task_create(user_test);
+    privilege_task_create(user_test);
+    privilege_task_create(user_test);
 
     core_timer_enable();
-    enable_irq_el1();
+    //enable_irq_el1();
 
     idle();
 

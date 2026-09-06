@@ -93,3 +93,45 @@ void schedule() {
     }
     context_switch(next);
 }
+
+void do_exec(void (*func)(void)) {
+    struct task *task = get_current();
+    unsigned long kstack_top = (unsigned long)&kstack_pool[task->taskid][LSTACK_SIZE];
+    kstack_top &= ~0xFUL; // Align to 16 bytes
+    // Set up the trapframe at the top of the kernel stack
+    struct trapframe *tf = (struct trapframe *)(kstack_top - sizeof(struct trapframe));
+
+    memzero(tf, sizeof(struct trapframe));
+
+    unsigned long ustack_top = (unsigned long)&ustack_pool[task->taskid][USTACK_SIZE];
+    ustack_top &= ~0xFUL; // Align to 16 bytes
+    tf->sp_el0 = ustack_top;
+    tf->elr_el1 = (unsigned long)func;
+    tf->spsr_el1 = 0x0; // EL0t, DAIF = 0, interrupts enabled
+
+    task->trapframe = tf;
+    task->user_stack_top = ustack_top;
+    task->is_user = 1;
+
+    // Switch to user mode and start executing the function
+    enter_user(tf, kstack_top);
+
+    while (1) {
+        // This point should never be reached if the user function returns
+        // If it does, we can just halt the CPU or reset the system
+        asm volatile("wfi");
+    }
+}
+
+void check_reschedule() {
+    struct task *task = get_current();
+
+    if (task->is_user && task->reschedled) {
+        uart_send_string("[Preempt task ");
+        uart_send_string(itoa(task->taskid, 10));
+        uart_send_string("]\r\n");
+
+        task->reschedled = 0;
+        schedule();
+    }
+}

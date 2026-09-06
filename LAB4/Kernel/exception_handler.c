@@ -64,3 +64,9 @@ void irq_exception_handler() {
         }
     }
 }
+
+void el0_irq_exception_handler(struct trapframe *tf) {
+    struct task *task = get_current();
+    task->trapframe = tf;
+    irq_exception_handler();
+}
