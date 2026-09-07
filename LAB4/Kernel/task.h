@@ -44,7 +44,6 @@ struct task {
     void (*entry)(void);
     volatile int reschedled;
     struct trapframe *trapframe;
-    unsigned long user_stack_top;
     int is_user;
 };
 

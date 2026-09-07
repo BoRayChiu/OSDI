@@ -120,7 +120,6 @@ void do_exec(void (*func)(void)) {
     tf->spsr_el1 = 0x0; // EL0t, DAIF = 0, interrupts enabled
 
     task->trapframe = tf;
-    task->user_stack_top = ustack_top;
     task->is_user = 1;
 
     // Switch to user mode and start executing the function

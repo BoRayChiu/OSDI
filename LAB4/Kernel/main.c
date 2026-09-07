@@ -5,6 +5,7 @@
 #include "mailbox.h"
 #include "framebuffer.h"
 #include "task.h"
+#include "syscall.h"
 
 extern void local_timer_enable(void);
 extern void enable_irq_el1(void);
@@ -129,10 +130,16 @@ void idle() {
 }
 
 void user_program() {
+    char c;
+    char prompt[] = "Type one character: ";
+    uart_write(prompt, sizeof(prompt) - 1);
+    uart_read(&c, 1);
+    char result[] = "\r\nYou typed: ";
+    uart_write(result, sizeof(result) - 1);
+    uart_write(&c, 1);
+    uart_write("\r\n", 2);
     while (1) {
-        while (1) {
-            asm volatile("nop");
-        };
+        asm volatile("nop");
     }
 }
 

@@ -252,21 +252,39 @@ el0_synchronous_handler:
   stp x26, x27, [sp, #208]
   stp x28, x29, [sp, #224]
   str x30, [sp, #240]
+
+  // Save SP_EL0
+  mrs x2, sp_el0
+  str x2, [sp, #248]
+
   // Save ELR_EL1
   mrs x2, elr_el1
-  str x2, [sp, #248]
+  str x2, [sp, #256]
+
   // Save SPSR_EL1
   mrs x2, spsr_el1
-  str x2, [sp, #256]
-  // x0 = ESR_EL1
-  mrs x0, esr_el1
+  str x2, [sp, #264]
+
+  // x0 = trapframe *, x1 = ESR_EL1
+  mov x0, sp
+  mrs x1, esr_el1
   bl el0_synchronous_exception_handler
+
+  // Check reschedled flag
+  bl check_reschedule
+
   // Restore SPSR_EL1
-  ldr x2, [sp, #256]
+  ldr x2, [sp, #264]
   msr spsr_el1, x2
+
   // Restore ELR_EL1
-  ldr x2, [sp, #248]
+  ldr x2, [sp, #256]
   msr elr_el1, x2
+
+  // Restore SP_EL0
+  ldr x2, [sp, #248]
+  msr sp_el0, x2
+
   // Restore x30 ~ x0
   ldr x30, [sp, #240]
   ldp x28, x29, [sp, #224]

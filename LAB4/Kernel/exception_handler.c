@@ -11,30 +11,49 @@ void synchronous_exception_handler(unsigned long elr, unsigned long esr) {
     uart_send_string(itoa(iss, 16));
 }
 
-void el0_synchronous_exception_handler(unsigned long esr) {
-    unsigned long ec;
-    unsigned long iss;
-    unsigned long syscall_num;
+void el0_synchronous_exception_handler(struct trapframe *tf, unsigned long esr) {
+    unsigned long ec = (esr >> 26) & 0x3F;
+    unsigned long iss = esr & 0x1FFFFFF;
 
-    ec  = (esr >> 26) & 0x3f;
-    iss = esr & 0x1ffffff;
-
-    if (ec == EC_SVC64) {
-        syscall_num = iss & 0xffff;
-
-        if (syscall_num == SYSCALL_ENABLE_TIMER) {
-            uart_send_string("[System call] Enable core timer\r\n");
-            core_timer_enable();
-            return;
-        }
-        if (syscall_num == SYSCALL_EXC) {
-            uart_send_string("[System call] svc #1\r\n");
-            return;
-        }
-        uart_send_string("Unknown system call\r\n");
+    if (ec != EC_SVC64) {
+        uart_send_string("Unknown synchronous exception\r\n");
         return;
     }
-    uart_send_string("Unknown synchronous exception\r\n");
+
+    unsigned long syscall_num = tf->x[8]; // x8 holds the syscall number
+    switch (syscall_num) {
+        case SYS_UART_WRITE:
+            tf->x[0] = sys_uart_write((const char *)tf->x[0], tf->x[1]);
+            break;
+
+        case SYS_UART_READ:
+            tf->x[0] = sys_uart_read((char *)tf->x[0], tf->x[1]);
+            break;
+
+        case SYS_EXEC:
+            uart_send_string("[System call] svc #2\r\n");
+            break;
+
+        case SYS_FORK:
+            uart_send_string("[System call] svc #3\r\n");
+            break;
+
+        case SYS_EXIT:
+            uart_send_string("[System call] svc #4\r\n");
+            break;
+
+        case SYS_ENABLE_TIMER:
+            uart_send_string("[System call] Enable core timer\r\n");
+            core_timer_enable();
+            break;
+
+        default:
+            uart_send_string("Unknown system call");
+            uart_send_string(itoa(syscall_num, 10));
+            uart_send_string("\r\n");
+            tf->x[0] = -1; // Return -1 for unknown syscall
+            break;
+    }
 }
 
 
