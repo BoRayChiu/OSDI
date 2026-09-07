@@ -137,7 +137,7 @@ void user_program() {
 }
 
 void user_test() {
-    uart_send_string("Task \r\n");
+    uart_send_string("Task ");
     uart_send_string(itoa(get_current()->taskid, 10));
     uart_send_string(" entering EL0\r\n");
     do_exec(user_program);

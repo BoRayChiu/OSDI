@@ -8,11 +8,6 @@
 #define LSTACK_SIZE 4096
 #define USTACK_SIZE 4096
 
-static struct task *runqueue[MAX_TASKS];
-static int rq_head = 0;
-static int rq_tail = 0;
-static int rq_count = 0;
-
 enum task_state {
     TASK_UNUSED,
     TASK_RUNNABLE,
@@ -52,12 +47,6 @@ struct task {
     unsigned long user_stack_top;
     int is_user;
 };
-
-static struct task task_pool[MAX_TASKS];
-static unsigned char kstack_pool[MAX_TASKS][LSTACK_SIZE]
-    __attribute__((aligned(16)));
-static unsigned char ustack_pool[MAX_TASKS][USTACK_SIZE]
-    __attribute__((aligned(16)));
 
 extern void set_current(struct task *task);
 extern struct task* get_current(void);

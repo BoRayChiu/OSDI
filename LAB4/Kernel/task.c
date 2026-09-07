@@ -1,5 +1,15 @@
 #include "task.h"
 
+static struct task *runqueue[MAX_TASKS];
+static int rq_head = 0;
+static int rq_tail = 0;
+static int rq_count = 0;
+static struct task task_pool[MAX_TASKS];
+static unsigned char kstack_pool[MAX_TASKS][LSTACK_SIZE]
+    __attribute__((aligned(16)));
+static unsigned char ustack_pool[MAX_TASKS][USTACK_SIZE]
+    __attribute__((aligned(16)));
+
 void enqueue_task(struct task *task) {
     if (rq_count >= MAX_TASKS) {
         return;
@@ -43,7 +53,7 @@ int privilege_task_create(void (*func)(void)) {
 
     unsigned long stack_top = (unsigned long)&kstack_pool[id][LSTACK_SIZE];
     stack_top &= ~0xFUL; // Align to 16 bytes
-    task->context.sp = stack_top;
+    task->context.sp = stack_top - sizeof(struct trapframe);
 
     // Set the link register to the entry function
     task->context.lr = (unsigned long)func;
