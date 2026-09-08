@@ -94,10 +94,10 @@ void schedule() {
     if (next == 0) {
         next = &task_pool[0]; // Fallback to the idle task
     }
+    next->state = TASK_RUNNING;
     if (next == prev) {
         return; // No need to switch if the next task is the same as the current task
     }
-    next->state = TASK_RUNNING;
     if (prev->taskid == 0) {
         prev->state = TASK_RUNNABLE; // Set the idle task back to runnable
     }

@@ -129,15 +129,20 @@ void idle() {
     }
 }
 
+void after_exec() {
+    char msg[] = "After exec!\r\n";
+    uart_write(msg, sizeof(msg) - 1);
+    while (1) {
+        asm volatile("nop");
+    }
+}
+
 void user_program() {
-    char c;
-    char prompt[] = "Type one character: ";
-    uart_write(prompt, sizeof(prompt) - 1);
-    uart_read(&c, 1);
-    char result[] = "\r\nYou typed: ";
-    uart_write(result, sizeof(result) - 1);
-    uart_write(&c, 1);
-    uart_write("\r\n", 2);
+    char msg1[] = "Before exec\r\n";
+    uart_write(msg1, sizeof(msg1) - 1);
+    exec(after_exec);
+    char msg2[] = "Should not reach here\r\n";
+    uart_write(msg2, sizeof(msg2) - 1);
     while (1) {
         asm volatile("nop");
     }
@@ -170,8 +175,6 @@ void main() {
 
     task_init();
 
-    privilege_task_create(user_test);
-    privilege_task_create(user_test);
     privilege_task_create(user_test);
 
     core_timer_enable();

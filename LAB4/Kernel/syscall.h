@@ -10,6 +10,7 @@
 
 extern unsigned long uart_write(const char *buf, unsigned long size);
 extern unsigned long uart_read(char *buf, unsigned long size);
+extern int exec(void (*func)(void));
 
 unsigned long sys_uart_write(const char *buf, unsigned long size);
 unsigned long sys_uart_read(char *buf, unsigned long size);
