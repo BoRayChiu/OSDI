@@ -138,11 +138,26 @@ void after_exec() {
 }
 
 void user_program() {
-    char msg1[] = "Before exec\r\n";
-    uart_write(msg1, sizeof(msg1) - 1);
-    exec(after_exec);
-    char msg2[] = "Should not reach here\r\n";
-    uart_write(msg2, sizeof(msg2) - 1);
+    int cnt = 100;
+    int pid = fork();
+    if (pid == 0) {
+        cnt = 200;
+        char msg[] = "Child running ";
+        char* count = itoa((const unsigned long)cnt, 10);
+        char end[] = "\r\n";
+        uart_write(msg, sizeof(msg) - 1);
+        uart_write(count, 3);
+        uart_write(end, sizeof(end) - 1);
+    }
+    else {
+        cnt = 300;
+        char msg[] = "Parent running ";
+        char* count = itoa((const unsigned long)cnt, 10);
+        char end[] = "\r\n";
+        uart_write(msg, sizeof(msg) - 1);
+        uart_write(count, 3);
+        uart_write(end, sizeof(end) - 1);
+    }
     while (1) {
         asm volatile("nop");
     }

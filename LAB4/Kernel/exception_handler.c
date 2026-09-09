@@ -36,7 +36,8 @@ void el0_synchronous_exception_handler(struct trapframe *tf, unsigned long esr) 
             break;
 
         case SYS_FORK:
-            uart_send_string("[System call] svc #3\r\n");
+            int child_id = do_fork(tf);
+            tf->x[0] = child_id;
             break;
 
         case SYS_EXIT:

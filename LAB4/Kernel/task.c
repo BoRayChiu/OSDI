@@ -144,3 +144,62 @@ void check_reschedule() {
         schedule();
     }
 }
+
+int do_fork(struct trapframe *parent_tf) {
+    struct task *parent = get_current();
+
+    // Find empty Task Slot from Task Pool
+    int id;
+    for (id = 1; id < MAX_TASKS; id++) {
+        if (task_pool[id].state == TASK_UNUSED) {
+            break;
+        }
+    }
+
+    if (id == MAX_TASKS) {
+        return -1; // No available task slot
+    }
+
+    // Initialize Child Task
+    struct task *child = &task_pool[id];
+    child->taskid = id;
+    child->state = TASK_RUNNABLE;
+    child->entry = 0;
+    child->reschedled = 0;
+    child->is_user = 1;
+    memzero(&child->context, sizeof(child->context));
+
+    // Construct Child Trapframe
+    unsigned long child_kstack_top = (unsigned long)&kstack_pool[id][LSTACK_SIZE];
+    child_kstack_top &= ~0xFUL; // Align to 16 bytes
+    struct trapframe *child_tf = (struct trapframe *)(child_kstack_top - sizeof(struct trapframe));
+    memcopy(child_tf, parent_tf, sizeof(struct trapframe));
+
+    // Copy User Stack
+    unsigned long parent_ubase = (unsigned long) &ustack_pool[parent->taskid][0];
+    unsigned long child_ubase = (unsigned long) &ustack_pool[id][0];
+    memcopy((void *)child_ubase, (void *)parent_ubase, USTACK_SIZE);
+
+    // Set Child SP_EL0
+    unsigned long sp_offset = parent_tf->sp_el0 - parent_ubase;
+    child_tf->sp_el0 = child_ubase + sp_offset;
+
+    // Set Child Frame Pointer (x29)
+    unsigned long parent_utop = (unsigned long) &ustack_pool[parent->taskid][USTACK_SIZE];
+    if (parent_tf->x[29] >= parent_ubase && parent_tf->x[29] <= parent_utop) {
+        unsigned long fp_offset = parent_tf->x[29] - parent_ubase;
+        child_tf->x[29] = child_ubase + fp_offset;
+    }
+
+    // Child return 0
+    child_tf->x[0] = 0;
+
+    child->trapframe = child_tf;
+    child->context.sp = (unsigned long)child_tf;
+    child->context.lr = (unsigned long)return_from_fork;
+
+    enqueue_task(child);
+
+    // Parent return Child id
+    return id;
+}

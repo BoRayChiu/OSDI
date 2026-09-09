@@ -35,3 +35,11 @@ void memzero(void *dst, unsigned long size) {
         *p++ = 0;
     }
 }
+
+void memcopy(void *dst, void *src, unsigned long size) {
+    unsigned char *d = (unsigned char *)dst;
+    const unsigned char *s = (const unsigned char *)src;
+    while (size--) {
+        *d++ = *s++;
+    }
+}

@@ -51,11 +51,13 @@ extern void set_current(struct task *task);
 extern struct task* get_current(void);
 extern void switch_to(struct cpu_context *prev, struct cpu_context *next);
 extern void enter_user(struct trapframe *tf, unsigned long kernel_stack_top);
+extern void return_from_fork(void);
 
 int privilege_task_create(void (*func)(void));
 void task_init(void);
 void context_switch(struct task *next);
 void schedule(void);
 void do_exec(void (*func)(void));
+int do_fork(struct trapframe *parent_tf);
 
 #endif // TASK_H
