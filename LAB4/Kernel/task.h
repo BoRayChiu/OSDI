@@ -12,6 +12,7 @@ enum task_state {
     TASK_UNUSED,
     TASK_RUNNABLE,
     TASK_RUNNING,
+    TASK_ZOMBIE
 };
 
 struct cpu_context {
@@ -45,6 +46,7 @@ struct task {
     volatile int reschedled;
     struct trapframe *trapframe;
     int is_user;
+    int exit_status;
 };
 
 extern void set_current(struct task *task);
@@ -59,5 +61,7 @@ void context_switch(struct task *next);
 void schedule(void);
 void do_exec(void (*func)(void));
 int do_fork(struct trapframe *parent_tf);
+void do_exit(int status);
+void zombie_reaper(void);
 
 #endif // TASK_H

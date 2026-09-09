@@ -47,6 +47,10 @@ int privilege_task_create(void (*func)(void)) {
     task->taskid = id;
     task->state = TASK_RUNNABLE;
     task->entry = func;
+    task->reschedled = 0;
+    task->trapframe = 0;
+    task->is_user = 0;
+    task->exit_status = 0;
 
     // Clear the CPU context for the new task
     memzero(&task->context, sizeof(task->context));
@@ -197,9 +201,66 @@ int do_fork(struct trapframe *parent_tf) {
     child->trapframe = child_tf;
     child->context.sp = (unsigned long)child_tf;
     child->context.lr = (unsigned long)return_from_fork;
+    child->exit_status = 0;
 
     enqueue_task(child);
 
     // Parent return Child id
     return id;
+}
+
+void do_exit(int status) {
+    struct task *task = get_current();
+
+    // Idle Task could not exit
+    if (task->taskid == 0) {
+        uart_send_string("[Error] Idle Task tried to exit\r\n");
+        while(1);
+    }
+
+    task->exit_status = status;
+    task->reschedled = 0;
+    task->state = TASK_ZOMBIE;
+
+    uart_send_string("[Exit] task ");
+    uart_send_string(itoa(task->taskid, 10));
+    uart_send_string(", status ");
+    uart_send_string(itoa(status, 10));
+    uart_send_string("\r\n");
+
+    schedule();
+
+    while(1);
+}
+
+static void reap_zombies() {
+    for (int i = 1; i < MAX_TASKS; i++) {
+        struct task *task = &task_pool[i];
+        if (task->state != TASK_ZOMBIE) {
+            continue;
+        }
+        uart_send_string("[Reaper] Reclaim Task ");
+        uart_send_string(itoa((const unsigned long)task->taskid, 10));
+        uart_send_string(", exit status ");
+        uart_send_string(itoa((const unsigned long)task->exit_status, 10));
+        uart_send_string("\r\n");
+
+        // Clear Zombie Task Stack
+        memzero(kstack_pool[i], LSTACK_SIZE);
+        memzero(ustack_pool[i], USTACK_SIZE);
+        memzero(&task->context, sizeof(task->context));
+        task->entry = 0;
+        task->reschedled = 0;
+        task->trapframe = 0;
+        task->is_user = 0;
+        task->exit_status = 0;
+        task->state = TASK_UNUSED;
+    }
+}
+
+void zombie_reaper() {
+    while (1) {
+        reap_zombies();
+        schedule();
+    }
 }

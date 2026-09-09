@@ -104,71 +104,70 @@ void delay(unsigned long count) {
 }
 
 void foo() {
-    while (1) {
-        struct task *cur = get_current();
-        uart_send_string("Task id: ");
-        uart_send_string(itoa(cur->taskid, 10));
-        uart_send_string("\r\n");
-        delay(1000000000);
-        
-        if (cur->reschedled) {
-            uart_send_string("Task id: ");
-            uart_send_string(itoa(cur->taskid, 10));
-            uart_send_string(" is rescheduled\r\n");
-            cur->reschedled = 0;
-            schedule();
-        }
-    }
+    int tmp = 5;
+    char msg1[] = "Task ";
+    uart_write(msg1, sizeof(msg1) - 1);
+    char *task_id = itoa(get_pid(), 10);
+    uart_write(task_id, strlen(task_id));
+    char msg2[] = " after exec, tmp value ";
+    uart_write(msg2, sizeof(msg2) - 1);
+    char *tmp_str = itoa(tmp, 10);
+    uart_write(tmp_str, strlen(tmp_str));
+    char msg4[] = "\r\n";
+    uart_write(msg4, sizeof(msg4) - 1);
+    exit(0);
 }
 
 void idle() {
-    while (1) {
-        uart_send_string("Idle task running...\r\n");
+    while(1) {
         schedule();
-        delay(1000000000);
+        delay(1000000);
     }
-}
-
-void after_exec() {
-    char msg[] = "After exec!\r\n";
-    uart_write(msg, sizeof(msg) - 1);
-    while (1) {
-        asm volatile("nop");
-    }
+    uart_send_string("Test finished\r\n");
+    while(1);
 }
 
 void user_program() {
-    int cnt = 100;
-    int pid = fork();
-    if (pid == 0) {
-        cnt = 200;
-        char msg[] = "Child running ";
-        char* count = itoa((const unsigned long)cnt, 10);
-        char end[] = "\r\n";
-        uart_write(msg, sizeof(msg) - 1);
-        uart_write(count, 3);
-        uart_write(end, sizeof(end) - 1);
+    int cnt = 1;
+    if (fork() == 0) {
+        fork();
+        delay(100000);
+        fork();
+        while(cnt < 10) {
+            char msg1[] = "Task id: ";
+            uart_write(msg1, sizeof(msg1) - 1);
+            char *task_id = itoa(get_pid(), 10);
+            uart_write(task_id, strlen(task_id));
+            char msg2[] = ", cnt: ";
+            uart_write(msg2, sizeof(msg2) - 1);
+            char *cnt_str = itoa(cnt, 10);
+            uart_write(cnt_str, strlen(cnt_str));
+            char msg3[] = "\r\n";
+            uart_write(msg3, sizeof(msg3) - 1);
+            delay(100000);
+            cnt++;
+        }
+        exit(0);
+        char msg4[] = "Should not be printed\r\n";
+        uart_write(msg4, sizeof(msg4) - 1);
     }
     else {
-        cnt = 300;
-        char msg[] = "Parent running ";
-        char* count = itoa((const unsigned long)cnt, 10);
-        char end[] = "\r\n";
-        uart_write(msg, sizeof(msg) - 1);
-        uart_write(count, 3);
-        uart_write(end, sizeof(end) - 1);
-    }
-    while (1) {
-        asm volatile("nop");
+        char msg1[] = "Task ";
+        uart_write(msg1, sizeof(msg1) - 1);
+        char *task_id = itoa(get_pid(), 10);
+        uart_write(task_id, strlen(task_id));
+        char msg2[] = " before exec, cnt value ";
+        uart_write(msg2, sizeof(msg2) - 1);
+        char *cnt_str = itoa(cnt, 10);
+        uart_write(cnt_str, strlen(cnt_str));
+        char msg4[] = "\r\n";
+        uart_write(msg4, sizeof(msg4) - 1);
+        exec(foo);
     }
 }
 
 void user_test() {
-    uart_send_string("Task ");
-    uart_send_string(itoa(get_current()->taskid, 10));
-    uart_send_string(" entering EL0\r\n");
     do_exec(user_program);
-    uart_send_string("Should not reach here\r\n");
 }
 
 void main() {
@@ -190,6 +189,7 @@ void main() {
 
     task_init();
 
+    privilege_task_create(zombie_reaper);
     privilege_task_create(user_test);
 
     core_timer_enable();

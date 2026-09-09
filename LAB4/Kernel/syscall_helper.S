@@ -4,6 +4,8 @@
 .global uart_read
 .global exec
 .global fork
+.global exit
+.global get_pid
 
 uart_write:
   mov x8, #0 // SYS_UART_WRITE
@@ -24,3 +26,13 @@ fork:
   mov x8, #3 // SYS_FORK
   svc #0
   ret
+
+exit:
+  mov x8, #4 // SYS_EXIT
+  svc #0
+  ret
+
+get_pid:
+ mov x8, #6 // SYS_GET_PID
+ svc #0
+ ret

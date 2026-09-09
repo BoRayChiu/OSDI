@@ -43,3 +43,11 @@ void memcopy(void *dst, void *src, unsigned long size) {
         *d++ = *s++;
     }
 }
+
+unsigned long strlen(const char *str) {
+    unsigned long len = 0;
+    while (str[len] != '\0') {
+        len++;
+    }
+    return len;
+}

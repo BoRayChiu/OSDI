@@ -41,12 +41,18 @@ void el0_synchronous_exception_handler(struct trapframe *tf, unsigned long esr) 
             break;
 
         case SYS_EXIT:
-            uart_send_string("[System call] svc #4\r\n");
+            int status = (int)tf->x[0];
+            do_exit(status);
             break;
 
         case SYS_ENABLE_TIMER:
             uart_send_string("[System call] Enable core timer\r\n");
             core_timer_enable();
+            break;
+
+        case SYS_GET_PID:
+            int taskid = get_current()->taskid;
+            tf->x[0] = taskid;
             break;
 
         default:
