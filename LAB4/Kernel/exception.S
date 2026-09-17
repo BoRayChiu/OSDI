@@ -265,10 +265,20 @@ el0_synchronous_handler:
   mrs x2, spsr_el1
   str x2, [sp, #264]
 
+  // Check Signal
+  bl check_pending_signal
+
+  bl enable_irq_el1
+
   // x0 = trapframe *, x1 = ESR_EL1
   mov x0, sp
   mrs x1, esr_el1
   bl el0_synchronous_exception_handler
+
+  bl disable_irq_el1
+
+  // Check Signal
+  bl check_pending_signal
 
   // Check reschedled flag
   bl check_reschedule
@@ -453,8 +463,14 @@ el0_irq_handler:
   mrs x0, spsr_el1
   str x0, [sp, #264]
 
+  // x0 = trapframe *
   mov x0, sp
   bl el0_irq_exception_handler
+
+  // Check Signal
+  bl check_pending_signal
+
+  // Check reschedled flag
   bl check_reschedule
 
   // Restore SPSR_EL1

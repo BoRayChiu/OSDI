@@ -6,6 +6,7 @@
 .global fork
 .global exit
 .global get_pid
+.global kill
 
 uart_write:
   mov x8, #0 // SYS_UART_WRITE
@@ -33,6 +34,12 @@ exit:
   ret
 
 get_pid:
- mov x8, #6 // SYS_GET_PID
- svc #0
- ret
+  mov x8, #6 // SYS_GET_PID
+  svc #0
+  ret
+
+kill:
+  mov x8, #7 // SYS_KILL
+  svc #0
+  ret
+  

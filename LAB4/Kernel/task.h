@@ -8,6 +8,9 @@
 #define LSTACK_SIZE 4096
 #define USTACK_SIZE 4096
 
+#define SIGKILL 9
+#define SIG_MASK(sig) (1UL << (sig))
+
 enum task_state {
     TASK_UNUSED,
     TASK_RUNNABLE,
@@ -47,6 +50,7 @@ struct task {
     struct trapframe *trapframe;
     int is_user;
     int exit_status;
+    volatile unsigned long pending_signals;
 };
 
 extern void set_current(struct task *task);
@@ -63,5 +67,7 @@ void do_exec(void (*func)(void));
 int do_fork(struct trapframe *parent_tf);
 void do_exit(int status);
 void zombie_reaper(void);
+int do_kill(int pid, int signal);
+void check_pending_signal(void);
 
 #endif // TASK_H

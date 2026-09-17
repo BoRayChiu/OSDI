@@ -51,6 +51,7 @@ int privilege_task_create(void (*func)(void)) {
     task->trapframe = 0;
     task->is_user = 0;
     task->exit_status = 0;
+    task->pending_signals = 0;
 
     // Clear the CPU context for the new task
     memzero(&task->context, sizeof(task->context));
@@ -72,6 +73,7 @@ void task_init() {
         task_pool[i].taskid = i;
         task_pool[i].state = TASK_UNUSED;
         task_pool[i].reschedled = 0;
+        task_pool[i].pending_signals = 0;
     }
     task_pool[0].state = TASK_RUNNING;
     task_pool[0].reschedled = 0;
@@ -171,6 +173,7 @@ int do_fork(struct trapframe *parent_tf) {
     child->entry = 0;
     child->reschedled = 0;
     child->is_user = 1;
+    child->pending_signals = 0;
     memzero(&child->context, sizeof(child->context));
 
     // Construct Child Trapframe
@@ -254,6 +257,7 @@ static void reap_zombies() {
         task->trapframe = 0;
         task->is_user = 0;
         task->exit_status = 0;
+        task->pending_signals = 0;
         task->state = TASK_UNUSED;
     }
 }
@@ -263,4 +267,48 @@ void zombie_reaper() {
         reap_zombies();
         schedule();
     }
+}
+
+int do_kill(int pid, int signal) {
+    if (signal != SIGKILL) {
+        return -1;
+    }
+
+    if (pid < 0 || pid >= MAX_TASKS) {
+        return -1;
+    }
+
+    struct task *task = &task_pool[pid];
+    if (task->state == TASK_UNUSED) {
+        return -1;
+    }
+
+    if (task->state == TASK_ZOMBIE) {
+        return -1;
+    }
+
+    // Can not kill Privilege Task
+    if (!task->is_user) {
+        return -1;
+    }
+
+    task->pending_signals |= SIG_MASK(SIGKILL);
+    return 0;
+}
+
+void check_pending_signal() {
+    struct task *task = get_current();
+    if (!task->is_user) {
+        return;
+    }
+
+    if (task->pending_signals & SIG_MASK(SIGKILL)) {
+        task->pending_signals &= ~SIG_MASK(SIGKILL);
+        uart_send_string("[Signal] Task");
+        uart_send_string(itoa(task->taskid, 10));
+        uart_send_string(" received SIGKILL\r\n");
+        // Define SIGKILL exit status 9
+        do_exit(SIGKILL);
+    }
+    
 }

@@ -170,6 +170,37 @@ void user_test() {
     do_exec(user_program);
 }
 
+static int victim_pid;
+void victim() {
+    char msg[] = "Victim is running\r\n";
+    uart_write(msg, sizeof(msg) - 1);
+    while (1) {
+        asm volatile("nop");
+    }
+}
+
+void killer() {
+    delay(5000000);
+    char msg[] = "Send SIGKILL to victim\r\n";
+    uart_write(msg, sizeof(msg) - 1);
+    int ret = kill(victim_pid, SIGKILL);
+    if (ret == 0) {
+        char res[] = "kill() success\r\n";
+        uart_write(res, sizeof(res) - 1);
+    }
+    while (1) {
+        asm volatile("nop");
+    }
+}
+
+void victim_test() {
+    do_exec(victim);
+}
+
+void killer_test() {
+    do_exec(killer);
+}
+
 void main() {
     uart_init();
     uart_send_string("===============\r\n");
@@ -190,10 +221,11 @@ void main() {
     task_init();
 
     privilege_task_create(zombie_reaper);
-    privilege_task_create(user_test);
+    victim_pid = privilege_task_create(victim_test);
+    privilege_task_create(killer_test);
 
     core_timer_enable();
-    //enable_irq_el1();
+    enable_irq_el1();
 
     idle();
 
