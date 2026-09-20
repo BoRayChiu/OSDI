@@ -25,13 +25,33 @@ struct task *dequeue_task() {
         return 0;
     }
 
-    struct task *task = runqueue[rq_head];
-    rq_head = (rq_head + 1) % MAX_TASKS;
+    int best_priority = -1;
+    int best_offset = -1;
+
+    for (int i = 0; i < rq_count; i++) {
+        int idx = (rq_head + i) % MAX_TASKS;
+        struct task *task = runqueue[idx];
+        if (task->priority > best_priority) {
+            best_priority = task->priority;
+            best_offset = i;
+        }
+    }
+
+    int best_idx = (rq_head + best_offset) % MAX_TASKS;
+    struct task *best = runqueue[best_idx];
+
+    for (int i = best_offset; i < rq_count - 1; i++) {
+        int from = (rq_head + i + 1) % MAX_TASKS;
+        int to = (rq_head + i) % MAX_TASKS;
+        runqueue[to] = runqueue[from];
+    }
+
+    rq_tail = (rq_tail - 1 + MAX_TASKS) % MAX_TASKS;
     rq_count--;
-    return task;
+    return best;
 }
 
-int privilege_task_create(void (*func)(void)) {
+int privilege_task_create_priority(void (*func)(void), int priority) {
     int id;
     for (id = 1; id < MAX_TASKS; id++) {
         if (task_pool[id].state == TASK_UNUSED) {
@@ -52,6 +72,7 @@ int privilege_task_create(void (*func)(void)) {
     task->is_user = 0;
     task->exit_status = 0;
     task->pending_signals = 0;
+    task->priority = priority;
 
     // Clear the CPU context for the new task
     memzero(&task->context, sizeof(task->context));
@@ -68,15 +89,21 @@ int privilege_task_create(void (*func)(void)) {
     return id;
 }
 
+int priviledge_task_create(void (*func)(void)) {
+    return privilege_task_create_priority(func, PRIORITY_NORMAL);
+}
+
 void task_init() {
     for (int i = 0; i < MAX_TASKS; i++) {
         task_pool[i].taskid = i;
         task_pool[i].state = TASK_UNUSED;
         task_pool[i].reschedled = 0;
         task_pool[i].pending_signals = 0;
+        task_pool[i].priority = PRIORITY_NORMAL;
     }
     task_pool[0].state = TASK_RUNNING;
     task_pool[0].reschedled = 0;
+    task_pool[0].priority = PRIORITY_LOWEST;
     set_current(&task_pool[0]);
 }
 
@@ -174,6 +201,7 @@ int do_fork(struct trapframe *parent_tf) {
     child->reschedled = 0;
     child->is_user = 1;
     child->pending_signals = 0;
+    child->priority = parent->priority;
     memzero(&child->context, sizeof(child->context));
 
     // Construct Child Trapframe

@@ -11,6 +11,10 @@
 #define SIGKILL 9
 #define SIG_MASK(sig) (1UL << (sig))
 
+#define PRIORITY_LOWEST  0
+#define PRIORITY_NORMAL  5
+#define PRIORITY_HIGHEST 10
+
 enum task_state {
     TASK_UNUSED,
     TASK_RUNNABLE,
@@ -51,6 +55,7 @@ struct task {
     int is_user;
     int exit_status;
     volatile unsigned long pending_signals;
+    int priority;
 };
 
 extern void set_current(struct task *task);
@@ -59,6 +64,7 @@ extern void switch_to(struct cpu_context *prev, struct cpu_context *next);
 extern void enter_user(struct trapframe *tf, unsigned long kernel_stack_top);
 extern void return_from_fork(void);
 
+int privilege_task_create_priority(void (*func)(void), int priority);
 int privilege_task_create(void (*func)(void));
 void task_init(void);
 void context_switch(struct task *next);

@@ -201,6 +201,36 @@ void killer_test() {
     do_exec(killer);
 }
 
+void a_task() {
+    while (1) {
+        for (int i = 0; i < 5; i++) {
+            uart_send_string("A\r\n");
+            delay(10000000);
+            schedule();
+        }
+        do_exit(1);
+    }
+}
+
+void b_task() {
+    while (1) {
+        for (int i = 0; i < 5; i++) {
+            uart_send_string("B\r\n");
+            delay(10000000);
+            schedule();
+        }
+        do_exit(2);
+    }
+}
+
+void c_task() {
+    while (1) {
+        uart_send_string("C\r\n");
+        delay(10000000);
+        schedule();
+    }
+}
+
 void main() {
     uart_init();
     uart_send_string("===============\r\n");
@@ -220,9 +250,9 @@ void main() {
 
     task_init();
 
-    privilege_task_create(zombie_reaper);
-    victim_pid = privilege_task_create(victim_test);
-    privilege_task_create(killer_test);
+    privilege_task_create_priority(a_task, PRIORITY_NORMAL);
+    privilege_task_create_priority(b_task, PRIORITY_NORMAL);
+    privilege_task_create_priority(c_task, PRIORITY_LOWEST);
 
     core_timer_enable();
     enable_irq_el1();
