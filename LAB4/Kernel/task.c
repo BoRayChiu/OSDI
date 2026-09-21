@@ -382,3 +382,64 @@ void block_current_on_uart() {
     task->state = TASK_WAITING;
     uart_wait_enqueue(task);
 }
+
+static void mutex_wait_enqueue(struct mutex *m, struct task *task) {
+    if (m->wait_count >= MAX_TASKS) {
+        return;
+    }
+    m->wait_queue[m->wait_tail] = task;
+    m->wait_tail = (m->wait_tail + 1) % MAX_TASKS;
+    m->wait_count++;
+}
+
+static struct task *mutex_wait_dequeue(struct mutex *m) {
+    if (m->wait_count == 0) {
+        return 0;
+    }
+    struct task *task = m->wait_queue[m->wait_head];
+    m->wait_head = (m->wait_head + 1) % MAX_TASKS;
+    m->wait_count--;
+    return task;
+}
+
+void mutex_init(struct mutex *m) {
+    m->locked = 0;
+    m->owner = 0;
+    m->wait_head = 0;
+    m->wait_tail = 0;
+    m->wait_count = 0;
+}
+
+void mutex_lock(struct mutex *m) {
+    while (1) {
+        disable_irq_el1();
+        struct task *task = get_current();
+        if (!m->locked) {
+            m->locked = 1;
+            m->owner = task;
+            enable_irq_el1();
+            return;
+        }
+        task->state = TASK_WAITING;
+        mutex_wait_enqueue(m, task);
+        enable_irq_el1();
+        schedule();
+    }
+}
+
+void mutex_unlock(struct mutex *m) {
+    disable_irq_el1();
+    struct task *current = get_current();
+    if (!m->locked || m->owner != current) {
+        enable_irq_el1();
+        return;
+    }
+    m->locked = 0;
+    m->owner = 0;
+    struct task *task = mutex_wait_dequeue(m);
+    if (task != 0 && task->state == TASK_WAITING) {
+        task->state = TASK_RUNNABLE;
+        enqueue_task(task);
+    }
+    enable_irq_el1();
+}

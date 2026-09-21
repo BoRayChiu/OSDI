@@ -59,11 +59,22 @@ struct task {
     int priority;
 };
 
+struct mutex {
+    int locked;
+    struct task *owner;
+    struct task *wait_queue[MAX_TASKS];
+    int wait_head;
+    int wait_tail;
+    int wait_count;
+};
+
 extern void set_current(struct task *task);
 extern struct task* get_current(void);
 extern void switch_to(struct cpu_context *prev, struct cpu_context *next);
 extern void enter_user(struct trapframe *tf, unsigned long kernel_stack_top);
 extern void return_from_fork(void);
+extern void enable_irq_el1(void);
+extern void disable_irq_el1(void);
 
 int privilege_task_create_priority(void (*func)(void), int priority);
 int privilege_task_create(void (*func)(void));
@@ -78,5 +89,8 @@ int do_kill(int pid, int signal);
 void check_pending_signal(void);
 void wake_one_uart_waiter(void);
 void block_current_on_uart(void);
+void mutex_init(struct mutex *m);
+void mutex_lock(struct mutex *m);
+void mutex_unlock(struct mutex *m);
 
 #endif // TASK_H

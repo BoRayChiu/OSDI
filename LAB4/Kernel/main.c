@@ -261,6 +261,43 @@ void reader_worker() {
     do_exec(worker);
 }
 
+struct mutex test_mutex;
+int counter = 0;
+
+void task_a() {
+    while (1) {
+        mutex_lock(&test_mutex);
+        uart_send_string("A acquired lock\r\n");
+        delay(100000000);
+        int tmp = counter;
+        delay(10000000);
+        counter = tmp + 1;
+        uart_send_string("A counter = ");
+        uart_send_string(itoa(counter, 10));
+        uart_send_string("\r\n");
+        uart_send_string("A unlock\r\n");
+        mutex_unlock(&test_mutex);
+        schedule();
+    }
+}
+
+void task_b() {
+    while (1) {
+        mutex_lock(&test_mutex);
+        uart_send_string("B acquired lock\r\n");
+        delay(1000000000);
+        int tmp = counter;
+        delay(100000000);
+        counter = tmp + 1;
+        uart_send_string("B counter = ");
+        uart_send_string(itoa(counter, 10));
+        uart_send_string("\r\n");
+        uart_send_string("B unlock\r\n");
+        mutex_unlock(&test_mutex);
+        schedule();
+    }
+}
+
 void main() {
     uart_init();
     uart_send_string("===============\r\n");
@@ -280,8 +317,8 @@ void main() {
 
     task_init();
 
-    privilege_task_create(reader_a_test);
-    privilege_task_create(reader_worker);
+    privilege_task_create(task_a);
+    privilege_task_create(task_b);
 
     core_timer_enable();
     enable_irq_el1();
