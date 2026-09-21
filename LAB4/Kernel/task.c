@@ -117,6 +117,7 @@ void context_switch(struct task *next) {
 }
 
 void schedule() {
+    disable_irq_el1();
     struct task *prev = get_current();
     struct task *next;
     if (prev->state == TASK_RUNNING && prev->taskid != 0) {
@@ -129,12 +130,14 @@ void schedule() {
     }
     next->state = TASK_RUNNING;
     if (next == prev) {
+        enable_irq_el1();
         return; // No need to switch if the next task is the same as the current task
     }
     if (prev->taskid == 0) {
         prev->state = TASK_RUNNABLE; // Set the idle task back to runnable
     }
     context_switch(next);
+    enable_irq_el1();
 }
 
 void do_exec(void (*func)(void)) {
@@ -168,7 +171,7 @@ void do_exec(void (*func)(void)) {
 void check_reschedule() {
     struct task *task = get_current();
 
-    if (task->is_user && task->reschedled) {
+    if (task != 0 && task->reschedled) {
         uart_send_string("[Preempt task ");
         uart_send_string(itoa(task->taskid, 10));
         uart_send_string("]\r\n");
@@ -375,6 +378,11 @@ void wake_one_uart_waiter() {
     }
     task->state = TASK_RUNNABLE;
     enqueue_task(task);
+
+    struct task *current = get_current();
+    if (current != 0 && current->priority < task->priority) {
+        current->reschedled = 1;
+    }
 }
 
 void block_current_on_uart() {

@@ -24,3 +24,11 @@ unsigned long sys_uart_read(char *buf, unsigned long size) {
     }
     return count;
 }
+
+void sys_long_kernel_test() {
+    uart_send_string("[SYS] Enter Long Syscall\r\n");
+    for (volatile unsigned long i = 0; i < 10000000000UL; i++) {
+        asm volatile("nop");
+    }
+    uart_send_string("[SYS] Leave Long Syscall\r\n");
+}

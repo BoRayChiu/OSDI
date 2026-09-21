@@ -7,6 +7,7 @@
 .global exit
 .global get_pid
 .global kill
+.global long_kernel_test
 
 uart_write:
   mov x8, #0 // SYS_UART_WRITE
@@ -40,6 +41,11 @@ get_pid:
 
 kill:
   mov x8, #7 // SYS_KILL
+  svc #0
+  ret
+
+long_kernel_test:
+  mov x8, #8 // SYS_LONG_KERNEL
   svc #0
   ret
   

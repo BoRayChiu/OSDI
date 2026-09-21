@@ -298,6 +298,37 @@ void task_b() {
     }
 }
 
+void low_task() {
+    char msg[] = "Low task starts syscall\r\n";
+    uart_write(msg, sizeof(msg) - 1);
+    long_kernel_test();
+    char done[] = "Low syscall returned\r\n";
+    uart_write(done, sizeof(done) - 1);
+    while(1) {
+        asm volatile("nop");
+    }
+}
+
+void high_task(void)
+{
+    char c;
+    char msg[] = "High waiting UART\r\n";
+    uart_write(msg, sizeof(msg) - 1);
+    while (1) {
+        uart_read(&c, 1);
+        char woke[] = "HIGH PREEMPTED KERNEL!\r\n";
+        uart_write(woke, sizeof(woke) - 1);
+    }
+}
+
+void low_task_test() {
+    do_exec(low_task);
+}
+
+void high_task_test() {
+    do_exec(high_task);
+}
+
 void main() {
     uart_init();
     uart_send_string("===============\r\n");
@@ -317,8 +348,8 @@ void main() {
 
     task_init();
 
-    privilege_task_create(task_a);
-    privilege_task_create(task_b);
+    privilege_task_create_priority(low_task_test, PRIORITY_LOWEST);
+    privilege_task_create_priority(high_task_test, PRIORITY_HIGHEST);
 
     core_timer_enable();
     enable_irq_el1();

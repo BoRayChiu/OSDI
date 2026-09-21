@@ -403,6 +403,8 @@ el1_irq_handler:
 
   bl irq_exception_handler
 
+  bl check_reschedule
+
   // Restore SPSR_EL1
   ldr x0, [sp, #256]
   msr spsr_el1, x0

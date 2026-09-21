@@ -61,6 +61,10 @@ void el0_synchronous_exception_handler(struct trapframe *tf, unsigned long esr) 
             tf->x[0] = do_kill(pid, signal);
             break;
 
+        case SYS_LONG_KERNEL:
+            sys_long_kernel_test();
+            break;
+
         default:
             uart_send_string("Unknown system call");
             uart_send_string(itoa(syscall_num, 10));

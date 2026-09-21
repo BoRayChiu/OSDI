@@ -9,6 +9,7 @@
 #define SYS_ENABLE_TIMER 5
 #define SYS_GET_PID 6
 #define SYS_KILL 7
+#define SYS_LONG_KERNEL 8
 
 extern unsigned long uart_write(const char *buf, unsigned long size);
 extern unsigned long uart_read(char *buf, unsigned long size);
@@ -17,10 +18,12 @@ extern int fork(void);
 extern void exit(int status);
 extern int get_pid(void);
 extern int kill(int pid, int signal);
+extern void long_kernel_test(void);
 extern void enable_irq_el1(void);
 extern void disable_irq_el1(void);
 
 unsigned long sys_uart_write(const char *buf, unsigned long size);
 unsigned long sys_uart_read(char *buf, unsigned long size);
+void sys_long_kernel_test(void);
 
 #endif
