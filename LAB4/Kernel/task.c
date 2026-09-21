@@ -89,7 +89,7 @@ int privilege_task_create_priority(void (*func)(void), int priority) {
     return id;
 }
 
-int priviledge_task_create(void (*func)(void)) {
+int privilege_task_create(void (*func)(void)) {
     return privilege_task_create_priority(func, PRIORITY_NORMAL);
 }
 
@@ -339,4 +339,46 @@ void check_pending_signal() {
         do_exit(SIGKILL);
     }
     
+}
+
+static struct task *uart_wait_queue[MAX_TASKS];
+static int uart_wait_head = 0;
+static int uart_wait_tail = 0;
+static int uart_wait_count = 0;
+
+static void uart_wait_enqueue(struct task *task) {
+    if (uart_wait_count >= MAX_TASKS) {
+        return;
+    }
+    uart_wait_queue[uart_wait_tail] = task;
+    uart_wait_tail = (uart_wait_tail + 1) % MAX_TASKS;
+    uart_wait_count++;
+}
+
+static struct task *uart_wait_dequeue() {
+    if (uart_wait_count == 0) {
+        return 0;
+    }
+    struct task *task = uart_wait_queue[uart_wait_head];
+    uart_wait_head = (uart_wait_head + 1) % MAX_TASKS;
+    uart_wait_count--;
+    return task;
+}
+
+void wake_one_uart_waiter() {
+    struct task *task = uart_wait_dequeue();
+    if (task == 0) {
+        return;
+    }
+    if (task->state != TASK_WAITING) {
+        return;
+    }
+    task->state = TASK_RUNNABLE;
+    enqueue_task(task);
+}
+
+void block_current_on_uart() {
+    struct task *task = get_current();
+    task->state = TASK_WAITING;
+    uart_wait_enqueue(task);
 }

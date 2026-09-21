@@ -1,6 +1,9 @@
 #ifndef UART_H
 #define UART_H
 
+#include "mailbox.h"
+#include "task.h"
+
 #define MMIO_BASE 0x3F000000
 
 #define GPFSEL1   (volatile unsigned int*)(MMIO_BASE + 0x00200004)
@@ -39,6 +42,8 @@
 void uart_init();
 void uart_send(unsigned int c);
 char uart_recv();
+int uart_rx_available(void);
+char uart_recv_buffered(void);
 void uart_send_string(const char* str);
 void uart_irq_init(void);
 void uart_irq_handler(void);

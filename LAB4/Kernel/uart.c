@@ -1,5 +1,4 @@
 #include "uart.h"
-#include "mailbox.h"
 
 #define UART_RX_BUFFER_SIZE 256
 
@@ -73,6 +72,16 @@ char uart_recv() {
     */
 }
 
+int uart_rx_available() {
+    return uart_rx_head != uart_rx_tail;
+}
+
+char uart_recv_buffered() {
+    char c = uart_rx_buffer[uart_rx_tail];
+    uart_rx_tail = (uart_rx_tail + 1) & (UART_RX_BUFFER_SIZE - 1);
+    return c;
+}
+
 void uart_send_string(const char* str) {
     while (*str) {
         uart_send(*str++);
@@ -99,6 +108,7 @@ void uart_irq_init(void) {
 
 void uart_irq_handler(void) {
     unsigned int mis = *UART_MIS;
+    int got_data = 0;
 
     if (mis & (UART_INT_RX | UART_INT_RT)) {
         while (!(*UART_FR & UART_FR_RXFE)) {
@@ -109,6 +119,7 @@ void uart_irq_handler(void) {
             if (next_head != uart_rx_tail) {
                 uart_rx_buffer[uart_rx_head] = c;
                 uart_rx_head = next_head;
+                got_data = 1;
             }
         }
         *UART_ICR = UART_INT_RX | UART_INT_RT;
@@ -116,5 +127,9 @@ void uart_irq_handler(void) {
 
     if (mis & UART_INT_ERR) {
         *UART_ICR = UART_INT_ERR;
+    }
+
+    if (got_data) {
+        wake_one_uart_waiter();
     }
 }

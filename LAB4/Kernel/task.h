@@ -19,7 +19,8 @@ enum task_state {
     TASK_UNUSED,
     TASK_RUNNABLE,
     TASK_RUNNING,
-    TASK_ZOMBIE
+    TASK_ZOMBIE,
+    TASK_WAITING
 };
 
 struct cpu_context {
@@ -75,5 +76,7 @@ void do_exit(int status);
 void zombie_reaper(void);
 int do_kill(int pid, int signal);
 void check_pending_signal(void);
+void wake_one_uart_waiter(void);
+void block_current_on_uart(void);
 
 #endif // TASK_H

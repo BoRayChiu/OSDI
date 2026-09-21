@@ -231,6 +231,36 @@ void c_task() {
     }
 }
 
+void reader_a() {
+    char c;
+    char msg[] = "Reader A waiting...\r\n";
+    uart_write(msg, sizeof(msg) - 1);
+    uart_read(&c, 1);
+    char got[] = "Reader A got: ";
+    uart_write(got, sizeof(got) - 1);
+    uart_write(&c, 1);
+    uart_write("\r\n", 2);
+    while(1) {
+        asm volatile("nop");
+    }
+}
+
+void worker() {
+    while(1) {
+        char msg[] = "Worker still running\r\n";
+        uart_write(msg, sizeof(msg) - 1);
+        delay(50000000);
+    }
+}
+
+void reader_a_test() {
+    do_exec(reader_a);
+}
+
+void reader_worker() {
+    do_exec(worker);
+}
+
 void main() {
     uart_init();
     uart_send_string("===============\r\n");
@@ -238,7 +268,7 @@ void main() {
     uart_send_string("Kernel is running at EL1\r\n");
     uart_send_string("===============\r\n");
     
-    //uart_irq_init();
+    uart_irq_init();
     //enable_irq_el1();
 
     // Initialize framebuffer and display splash screen
@@ -250,9 +280,8 @@ void main() {
 
     task_init();
 
-    privilege_task_create_priority(a_task, PRIORITY_NORMAL);
-    privilege_task_create_priority(b_task, PRIORITY_NORMAL);
-    privilege_task_create_priority(c_task, PRIORITY_LOWEST);
+    privilege_task_create(reader_a_test);
+    privilege_task_create(reader_worker);
 
     core_timer_enable();
     enable_irq_el1();
